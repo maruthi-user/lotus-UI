@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#041013" />
+  <meta name="color-scheme" content="dark" />
+  <title>Lotus — A Study in Bloom</title>
+  <meta name="description" content="An interactive lotus flower that grows from an emerald bud into a golden bloom. A quiet study of colour, time and patience." />
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/fonts.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <div class="cursor-glow" id="cursorGlow" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <main class="scene" id="scene">
+    <div class="aurora aurora--one" aria-hidden="true"></div>
+    <div class="aurora aurora--two" aria-hidden="true"></div>
+    <div class="glow" id="lotusGlow" aria-hidden="true"></div>
+    <canvas class="motes" id="motes" aria-hidden="true"></canvas>
+
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Lotus — a study in bloom">
+        <span class="brand__mark" aria-hidden="true"></span>
+        <span class="brand__text">
+          Lotus
+          <small>Study Nº 01</small>
+        </span>
+      </a>
+
+      <div class="phase-pill" role="status" aria-live="polite">
+        <span class="phase-pill__dot" aria-hidden="true"></span>
+        <span class="phase-pill__name" id="phaseName">Dormant</span>
+        <span class="phase-pill__sep" aria-hidden="true"></span>
+        <span class="phase-pill__count" id="phaseCount">01 / 05</span>
+      </div>
+    </header>
+
+    <section class="hero-copy" aria-label="Introduction">
+      <p class="eyebrow">Digital botany · Nelumbo nucifera</p>
+      <h1>A quiet<br /><em>unfolding</em></h1>
+      <p class="lede">From emerald bud to golden bloom —<br />a lotus grows at its own pace.</p>
+    </section>
+
+    <aside class="phase-rail" aria-label="Growth phases">
+      <p class="phase-rail__title">Phases</p>
+      <ol class="phase-rail__list" id="phaseList">
+        <li class="is-active" data-phase="0">
+          <span class="phase-rail__num">01</span>
+          <span class="phase-rail__name">Dormant</span>
+        </li>
+        <li data-phase="1">
+          <span class="phase-rail__num">02</span>
+          <span class="phase-rail__name">Budding</span>
+        </li>
+        <li data-phase="2">
+          <span class="phase-rail__num">03</span>
+          <span class="phase-rail__name">Emerging</span>
+        </li>
+        <li data-phase="3">
+          <span class="phase-rail__num">04</span>
+          <span class="phase-rail__name">Unfolding</span>
+        </li>
+        <li data-phase="4">
+          <span class="phase-rail__num">05</span>
+          <span class="phase-rail__name">Full bloom</span>
+        </li>
+      </ol>
+    </aside>
+
+    <div class="lotus-wrap" id="lotusWrap">
+      <svg id="lotus" viewBox="120 360 560 560" role="img" aria-labelledby="lotusTitle">
+        <title id="lotusTitle">An animated lotus flower grows from a small emerald bud into a wide golden bloom</title>
+
+        <defs>
+          <linearGradient id="petalGrad0" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" class="g-base" stop-color="#1f4d40" />
+            <stop offset="0.55" class="g-mid" stop-color="#4a8f6c" />
+            <stop offset="1" class="g-tip" stop-color="#9ec9a9" />
+          </linearGradient>
+          <linearGradient id="petalGrad1" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" class="g-base" stop-color="#235346" />
+            <stop offset="0.55" class="g-mid" stop-color="#5a9a74" />
+            <stop offset="1" class="g-tip" stop-color="#b7d7b9" />
+          </linearGradient>
+          <linearGradient id="petalGrad2" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" class="g-base" stop-color="#275a4b" />
+            <stop offset="0.55" class="g-mid" stop-color="#6aa37c" />
+            <stop offset="1" class="g-tip" stop-color="#cfe2c6" />
+          </linearGradient>
+
+          <linearGradient id="stemGrad" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0" stop-color="#123a32" />
+            <stop offset="1" stop-color="#5b9a76" />
+          </linearGradient>
+
+          <radialGradient id="coreGlow">
+            <stop offset="0" stop-color="#ffdca0" stop-opacity="0.55" />
+            <stop offset="0.55" stop-color="#f2b96f" stop-opacity="0.18" />
+            <stop offset="1" stop-color="#f2b96f" stop-opacity="0" />
+          </radialGradient>
+
+          <radialGradient id="coreGrad" cx="38%" cy="30%" r="75%">
+            <stop offset="0" stop-color="#f8e0ac" />
+            <stop offset="0.6" stop-color="#e3b56f" />
+            <stop offset="1" stop-color="#a9763f" />
+          </radialGradient>
+
+          <radialGradient id="padGrad" cx="50%" cy="45%" r="60%">
+            <stop offset="0" stop-color="#2a6b57" stop-opacity="0.85" />
+            <stop offset="0.7" stop-color="#174436" stop-opacity="0.6" />
+            <stop offset="1" stop-color="#0c2a28" stop-opacity="0" />
+          </radialGradient>
+
+          <radialGradient id="waterGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#d9e9c4" stop-opacity="0.18" />
+            <stop offset="0.5" stop-color="#8fc7b2" stop-opacity="0.07" />
+            <stop offset="1" stop-color="#8fc7b2" stop-opacity="0" />
+          </radialGradient>
+
+          <linearGradient id="reflectionFade" x1="0" y1="765" x2="0" y2="920" gradientUnits="userSpaceOnUse">
+            <stop offset="0" stop-color="#ffffff" stop-opacity="0.6" />
+            <stop offset="0.55" stop-color="#ffffff" stop-opacity="0.16" />
+            <stop offset="1" stop-color="#ffffff" stop-opacity="0" />
+          </linearGradient>
+
+          <mask id="reflectionMask" maskUnits="userSpaceOnUse" x="0" y="765" width="800" height="155">
+            <rect x="0" y="765" width="800" height="155" fill="url(#reflectionFade)" />
+          </mask>
+
+          <filter id="reflectionBlur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2.6" />
+          </filter>
+        </defs>
+
+        <g id="water">
+          <ellipse cx="400" cy="788" rx="300" ry="58" fill="url(#waterGlow)" />
+          <path d="M 135 780 Q 400 765 665 780" fill="none" stroke="#bfe3d4" stroke-opacity="0.1" stroke-width="1" />
+
+          <g opacity="0.5">
+            <ellipse cx="236" cy="812" rx="98" ry="21" fill="url(#padGrad)" />
+            <path d="M 236 812 L 316 802" fill="none" stroke="#0a2620" stroke-opacity="0.5" stroke-width="1.4" />
+            <ellipse cx="596" cy="826" rx="62" ry="14" fill="url(#padGrad)" opacity="0.8" />
+            <path d="M 596 826 L 643 820" fill="none" stroke="#0a2620" stroke-opacity="0.5" stroke-width="1.2" />
+          </g>
+        </g>
+
+        <g id="flower">
+          <path id="stem" d="M 400 780 C 392 740 407 700 400 640" fill="none" stroke="url(#stemGrad)" stroke-width="4" stroke-linecap="round" />
+          <path id="stemHighlight" d="M 401.6 780 C 393.6 740 408.6 700 401.6 640" fill="none" stroke="#d7f0dd" stroke-opacity="0.16" stroke-width="1.2" stroke-linecap="round" />
+
+          <g id="bloom">
+            <g id="petals0"></g>
+            <g id="petals1"></g>
+            <g id="petals2"></g>
+            <g id="core" opacity="0"></g>
+          </g>
+        </g>
+
+        <g id="reflection" mask="url(#reflectionMask)" filter="url(#reflectionBlur)" opacity="0.42">
+          <use href="#flower" transform="translate(0 1029.6) scale(1 -0.32)" />
+        </g>
+
+        <g id="ripples"></g>
+      </svg>
+    </div>
+
+    <footer class="dock" aria-label="Playback controls">
+      <div class="dock__controls">
+        <button class="btn btn--primary is-playing" id="playBtn" type="button" aria-label="Pause growth">
+          <svg class="icon icon--play" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 5.4v13.2c0 .8.9 1.3 1.6.9l10-6.6c.6-.4.6-1.4 0-1.8l-10-6.6C8.9 4.1 8 4.6 8 5.4Z" fill="currentColor" />
+          </svg>
+          <svg class="icon icon--pause" viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="7" y="5" width="3.4" height="14" rx="1.4" fill="currentColor" />
+            <rect x="13.6" y="5" width="3.4" height="14" rx="1.4" fill="currentColor" />
+          </svg>
+        </button>
+
+        <button class="btn btn--ghost" id="replayBtn" type="button" aria-label="Replay growth from the beginning">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4.9 8.2A8 8 0 1 1 4 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            <path d="M4.8 4.4v4.4h4.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline__meta">
+          <span>Growth</span>
+          <span class="timeline__time" id="timeLabel">0:00 / 0:18</span>
+        </div>
+        <input
+          class="timeline__range"
+          id="scrub"
+          type="range"
+          min="0"
+          max="1000"
+          step="1"
+          value="0"
+          aria-label="Growth progress"
+          aria-valuetext="0 percent"
+        />
+      </div>
+
+      <div class="dock__hint" aria-hidden="true">
+        <kbd>Space</kbd><span>play</span><kbd>R</kbd><span>replay</span>
+      </div>
+    </footer>
+  </main>
+
+  <script src="js/lotus.js" defer></script>
+  <script src="js/motes.js" defer></script>
+  <script src="js/app.js" defer></script>
+</body>
+</html>
