@@ -23,16 +23,23 @@
   var lastPhase = -1;
   var lastTime = 0;
   var lastUi = 0;
+  var jump = null;
 
   var reduced = false;
   var allowMotion = true;
 
   var targetX = 0;
   var targetY = 0;
+  var targetRX = 0;
+  var targetRY = 0;
   var parallaxX = 0;
   var parallaxY = 0;
+  var tiltX = 0;
+  var tiltY = 0;
   var appliedX = 0;
   var appliedY = 0;
+  var appliedRX = 0;
+  var appliedRY = 0;
 
   var els = {};
 
@@ -51,6 +58,10 @@
   function formatTime(seconds) {
     var whole = Math.max(0, Math.floor(seconds));
     return Math.floor(whole / 60) + ":" + pad(whole % 60);
+  }
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   }
 
   function hexToRgb(hex) {
@@ -125,6 +136,12 @@
         els.phaseItems.forEach(function (item, itemIndex) {
           item.classList.toggle("is-active", itemIndex === index);
           item.classList.toggle("is-done", itemIndex < index);
+
+          if (itemIndex === index) {
+            item.setAttribute("aria-current", "step");
+          } else {
+            item.removeAttribute("aria-current");
+          }
         });
       }
     }
@@ -146,8 +163,33 @@
     }
   }
 
+  /* Glide the growth clock to the start of a phase. The camera follows
+     the clock, so the move reads as a cut-free push in or pull back. */
+  function jumpToPhase(index) {
+    var phase = PHASES[clamp(index, 0, PHASES.length - 1)];
+
+    activateMotion();
+    lastTime = window.performance.now();
+
+    if (reduced || Math.abs(phase.at - progress) < 0.002) {
+      jump = null;
+      progress = phase.at;
+    } else {
+      jump = {
+        from: progress,
+        to: phase.at,
+        elapsed: 0,
+        duration: 0.7 + 1.1 * Math.abs(phase.at - progress)
+      };
+    }
+
+    syncPlayButton();
+    updateUI(true);
+  }
+
   function togglePlay() {
     activateMotion();
+    jump = null;
 
     if (progress >= 0.999) {
       progress = 0;
@@ -163,6 +205,7 @@
 
   function replay() {
     activateMotion();
+    jump = null;
     progress = 0;
     playing = true;
     lastTime = window.performance.now();
@@ -172,6 +215,7 @@
 
   function onScrubInput(event) {
     activateMotion();
+    jump = null;
     progress = clamp(Number(event.target.value) / 1000, 0, 1);
     playing = false;
     lastTime = window.performance.now();
@@ -198,9 +242,17 @@
       return;
     }
 
+    if (/^[1-5]$/.test(event.key) && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      event.preventDefault();
+      jumpToPhase(Number(event.key) - 1);
+      return;
+    }
+
     if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && !interactive) {
       event.preventDefault();
       activateMotion();
+      jump = null;
       progress = clamp(progress + (event.key === "ArrowRight" ? 0.02 : -0.02), 0, 1);
       playing = false;
       syncPlayButton();
@@ -209,6 +261,10 @@
   }
 
   function onPointerMove(event) {
+    if (window.LotusBloom) {
+      window.LotusBloom.setPointer(event.clientX, event.clientY, true);
+    }
+
     if (event.pointerType === "touch") return;
 
     document.body.classList.add("has-pointer");
@@ -218,8 +274,13 @@
         "translate3d(" + event.clientX + "px, " + event.clientY + "px, 0) translate(-50%, -50%)";
     }
 
-    targetX = (event.clientX / window.innerWidth - 0.5) * 18;
-    targetY = (event.clientY / window.innerHeight - 0.5) * 12;
+    var nx = event.clientX / window.innerWidth - 0.5;
+    var ny = event.clientY / window.innerHeight - 0.5;
+
+    targetX = nx * 18;
+    targetY = ny * 12;
+    targetRY = nx * 16;
+    targetRX = -ny * 9;
   }
 
   function onPointerOut(event) {
@@ -228,6 +289,27 @@
     document.body.classList.remove("has-pointer");
     targetX = 0;
     targetY = 0;
+    targetRX = 0;
+    targetRY = 0;
+
+    if (window.LotusBloom) {
+      window.LotusBloom.setPointer(0, 0, false);
+    }
+  }
+
+  function onPointerRelease(event) {
+    scrubbing = false;
+
+    if (event.pointerType === "touch" && window.LotusBloom) {
+      window.LotusBloom.setPointer(0, 0, false);
+    }
+  }
+
+  function onPhaseClick(event) {
+    var item = event.target.closest ? event.target.closest("[data-phase]") : null;
+    if (!item) return;
+
+    jumpToPhase(Number(item.getAttribute("data-phase")));
   }
 
   function bindEvents() {
@@ -247,13 +329,12 @@
       });
     }
 
-    window.addEventListener("pointerup", function () {
-      scrubbing = false;
-    });
+    if (els.phaseList) {
+      els.phaseList.addEventListener("click", onPhaseClick);
+    }
 
-    window.addEventListener("pointercancel", function () {
-      scrubbing = false;
-    });
+    window.addEventListener("pointerup", onPointerRelease);
+    window.addEventListener("pointercancel", onPointerRelease);
 
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -271,7 +352,17 @@
 
     var clock = allowMotion ? now / 1000 : 0;
 
-    if (playing) {
+    if (jump) {
+      jump.elapsed += dt;
+
+      var k = clamp(jump.elapsed / jump.duration, 0, 1);
+      progress = jump.from + (jump.to - jump.from) * easeInOutCubic(k);
+
+      if (k >= 1) {
+        progress = jump.to;
+        jump = null;
+      }
+    } else if (playing) {
       progress = clamp(progress + dt / DURATION, 0, 1);
 
       if (progress >= 1) {
@@ -292,17 +383,25 @@
     if (!reduced) {
       parallaxX += (targetX - parallaxX) * 0.06;
       parallaxY += (targetY - parallaxY) * 0.06;
+      tiltX += (targetRX - tiltX) * 0.05;
+      tiltY += (targetRY - tiltY) * 0.05;
 
       if (
         Math.abs(parallaxX - appliedX) > 0.01 ||
-        Math.abs(parallaxY - appliedY) > 0.01
+        Math.abs(parallaxY - appliedY) > 0.01 ||
+        Math.abs(tiltX - appliedRX) > 0.005 ||
+        Math.abs(tiltY - appliedRY) > 0.005
       ) {
         appliedX = parallaxX;
         appliedY = parallaxY;
+        appliedRX = tiltX;
+        appliedRY = tiltY;
 
         if (els.wrap) {
           els.wrap.style.setProperty("--px", parallaxX.toFixed(2) + "px");
           els.wrap.style.setProperty("--py", parallaxY.toFixed(2) + "px");
+          els.wrap.style.setProperty("--rx", tiltX.toFixed(3) + "deg");
+          els.wrap.style.setProperty("--ry", tiltY.toFixed(3) + "deg");
         }
       }
     }
@@ -327,6 +426,7 @@
       timeLabel: $("timeLabel"),
       phaseName: $("phaseName"),
       phaseCount: $("phaseCount"),
+      phaseList: $("phaseList"),
       phaseItems: Array.prototype.slice.call(
         document.querySelectorAll("#phaseList li")
       )
@@ -340,6 +440,7 @@
     allowMotion = !reduced;
 
     if (window.LotusBloom) {
+      window.LotusBloom.setReduced(reduced);
       window.LotusBloom.init();
     }
 
